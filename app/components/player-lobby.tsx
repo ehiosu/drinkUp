@@ -172,7 +172,7 @@ export default function PlayerLobby({
         </div>
 
         {/* AI Pre-Generate Section */}
-        {canStart && gameType !== "kings-cup" && (
+        {canStart && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

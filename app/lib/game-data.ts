@@ -64,6 +64,26 @@ export const games: GameInfo[] = [
     minPlayers: 2,
     maxPlayers: 20,
   },
+  {
+    id: "guess-the",
+    name: "Guess The...",
+    description: "3 hints. Wrong guess = drink. Can you figure it out?",
+    icon: "🔍",
+    color: "from-yellow-500 to-amber-600",
+    minPlayers: 2,
+    maxPlayers: 20,
+    needsAI: true,
+  },
+  {
+    id: "countdown",
+    name: "Countdown",
+    description: "Name X things in Y seconds... or drink!",
+    icon: "⏱️",
+    color: "from-fuchsia-500 to-pink-600",
+    minPlayers: 2,
+    maxPlayers: 20,
+    needsAI: true,
+  },
 ];
 
 export const truthOrDrinkQuestions = [

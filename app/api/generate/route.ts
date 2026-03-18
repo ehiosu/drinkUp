@@ -3,6 +3,9 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic();
 
+// Types that return structured JSON (not plain text)
+const jsonTypes = ["would-you-rather", "guess-the", "countdown"];
+
 // Single question prompts (used mid-game)
 const singlePrompts: Record<string, (players: string[], currentPlayer?: string) => string> = {
   "truth-or-drink": (players, currentPlayer) =>
@@ -19,6 +22,15 @@ const singlePrompts: Record<string, (players: string[], currentPlayer?: string) 
 
   "spin-the-bottle": (players) =>
     `Generate a single fun dare/challenge for a Spin the Bottle drinking game with players: ${players.join(", ")}. It can be a drinking dare, funny challenge, or social task. Keep it party-appropriate. Return ONLY the dare text, nothing else.`,
+
+  "kings-cup": (players) =>
+    `Generate a single creative drinking game rule or challenge for a Kings Cup card game with players: ${players.join(", ")}. It should be a fun party rule, challenge, or mini-game. Keep it party-appropriate. Return ONLY a JSON object: {"rule": "Rule Name", "description": "What players must do"}`,
+
+  "guess-the": (players) =>
+    `Generate a single "Guess The..." challenge for a drinking game with players: ${players.join(", ")}. Pick a random category (song, movie, celebrity, country, animal, food, TV show, brand, etc). Return ONLY a JSON object: {"category": "Movie", "answer": "The actual answer", "hints": ["Easy-ish hint", "Medium hint", "Very specific hint"]}. Make the hints go from vague to specific. The answer should be well-known.`,
+
+  "countdown": (players) =>
+    `Generate a single "Countdown" challenge for a drinking game with players: ${players.join(", ")}. Pick a fun category and a number of items to name (between 3-7). Return ONLY a JSON object: {"category": "Types of pasta", "count": 5, "timeSeconds": 15, "examples": ["penne", "fusilli", "spaghetti", "rigatoni", "farfalle"]}. The category should be fun and the count should be achievable but challenging.`,
 };
 
 // Batch prompts (used for pre-generation)
@@ -37,10 +49,19 @@ const batchPrompts: Record<string, (count: number, players: string[]) => string>
 
   "spin-the-bottle": (count, players) =>
     `Generate ${count} unique fun dares/challenges for a Spin the Bottle drinking game. Players: ${players.join(", ")}. Include a mix of drinking dares, funny challenges, and social tasks. Keep it party-appropriate. Return ONLY a JSON array of strings. Example: ["Take two sips!", "Do your best dance move!"]`,
+
+  "kings-cup": (count, players) =>
+    `Generate ${count} unique creative drinking game rules/challenges for Kings Cup. Players: ${players.join(", ")}. Each should be a fun party rule, challenge, or mini-game. Keep it party-appropriate. Return ONLY a JSON array of objects. Example: [{"rule": "Rule Name", "description": "What players must do"}, ...]`,
+
+  "guess-the": (count, players) =>
+    `Generate ${count} unique "Guess The..." challenges for a drinking game. Players: ${players.join(", ")}. Use a MIX of categories (songs, movies, celebrities, countries, animals, foods, TV shows, brands, etc). Return ONLY a JSON array of objects. Example: [{"category": "Movie", "answer": "Titanic", "hints": ["It won 11 Academy Awards", "It's set in 1912", "Jack and Rose"]}, ...]. Make hints go from vague to specific. Answers should be well-known.`,
+
+  "countdown": (count, players) =>
+    `Generate ${count} unique "Countdown" challenges for a drinking game. Players: ${players.join(", ")}. Each has a fun category and number of items (3-7) to name within a time limit. Return ONLY a JSON array of objects. Example: [{"category": "Types of pasta", "count": 5, "timeSeconds": 15, "examples": ["penne", "fusilli", "spaghetti", "rigatoni", "farfalle"]}, ...]. Categories should be varied and fun.`,
 };
 
 // Fallback questions if Claude API is unavailable
-const fallbacks: Record<string, () => Record<string, string>> = {
+const fallbacks: Record<string, () => Record<string, unknown>> = {
   "truth-or-drink": () => ({
     question: [
       "If you could swap lives with someone in this room, who and why?",
@@ -72,6 +93,28 @@ const fallbacks: Record<string, () => Record<string, string>> = {
     optionA: "Have to announce every lie you tell",
     optionB: "Never be able to tell a lie",
   }),
+  "kings-cup": () => ({
+    rule: "Thumb Master",
+    description: "Put your thumb on the table anytime. Last person to copy drinks!",
+  }),
+  "guess-the": () => {
+    const items = [
+      { category: "Movie", answer: "Titanic", hints: ["Won 11 Academy Awards", "Set in 1912", "Features Jack and Rose"] },
+      { category: "Song", answer: "Bohemian Rhapsody", hints: ["By a British rock band", "Released in 1975", "Is this the real life?"] },
+      { category: "Celebrity", answer: "Beyoncé", hints: ["Born in Houston, Texas", "Former member of a girl group", "Married to a rapper"] },
+      { category: "Country", answer: "Japan", hints: ["Island nation in Asia", "Known for cherry blossoms", "Home of sushi and anime"] },
+      { category: "TV Show", answer: "Breaking Bad", hints: ["Set in New Mexico", "Involves chemistry", "Say my name"] },
+    ];
+    return items[Math.floor(Math.random() * items.length)];
+  },
+  "countdown": () => {
+    const items = [
+      { category: "Types of pizza toppings", count: 5, timeSeconds: 15, examples: ["pepperoni", "mushrooms", "olives", "onions", "sausage"] },
+      { category: "Disney movies", count: 4, timeSeconds: 12, examples: ["Lion King", "Frozen", "Aladdin", "Moana"] },
+      { category: "Social media platforms", count: 5, timeSeconds: 10, examples: ["Instagram", "TikTok", "Twitter", "Snapchat", "Facebook"] },
+    ];
+    return items[Math.floor(Math.random() * items.length)];
+  },
 };
 
 export async function POST(request: NextRequest) {
@@ -100,7 +143,6 @@ export async function POST(request: NextRequest) {
           const text =
             message.content[0].type === "text" ? message.content[0].text.trim() : "[]";
 
-          // Extract JSON array from response (handle markdown code blocks)
           const jsonMatch = text.match(/\[[\s\S]*\]/);
           if (jsonMatch) {
             const parsed = JSON.parse(jsonMatch[0]);
@@ -111,7 +153,6 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Fallback: return empty array, games will use built-in questions
       return NextResponse.json({ questions: [] });
     } else {
       // --- SINGLE GENERATION (mid-game) ---
@@ -124,7 +165,7 @@ export async function POST(request: NextRequest) {
         try {
           const message = await anthropic.messages.create({
             model: "claude-haiku-4-5-20251001",
-            max_tokens: 256,
+            max_tokens: 512,
             messages: [
               { role: "user", content: promptBuilder(players, currentPlayer) },
             ],
@@ -133,15 +174,16 @@ export async function POST(request: NextRequest) {
           const text =
             message.content[0].type === "text" ? message.content[0].text.trim() : "";
 
-          if (type === "would-you-rather") {
+          // For JSON-returning types, parse the response
+          if (jsonTypes.includes(type)) {
             try {
-              const parsed = JSON.parse(text);
-              return NextResponse.json(parsed);
-            } catch {
-              const match = text.match(/optionA["\s:]+([^"]+)".*optionB["\s:]+([^"]+)"/);
-              if (match) {
-                return NextResponse.json({ optionA: match[1], optionB: match[2] });
+              const jsonMatch = text.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                const parsed = JSON.parse(jsonMatch[0]);
+                return NextResponse.json(parsed);
               }
+            } catch {
+              // Fall through to fallback
             }
           } else {
             return NextResponse.json({ question: text });
