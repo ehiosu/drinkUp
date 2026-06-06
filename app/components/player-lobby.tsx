@@ -18,6 +18,7 @@ type PlayerLobbyProps = {
   gameName: string;
   gameIcon: string;
   gameType: string;
+  disableAI?: boolean;
 };
 
 const playerColors = [
@@ -45,6 +46,7 @@ export default function PlayerLobby({
   gameName,
   gameIcon,
   gameType,
+  disableAI = false,
 }: PlayerLobbyProps) {
   const [newName, setNewName] = useState("");
   const [useAI, setUseAI] = useState(false);
@@ -172,7 +174,7 @@ export default function PlayerLobby({
         </div>
 
         {/* AI Pre-Generate Section */}
-        {canStart && (
+        {canStart && !disableAI && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

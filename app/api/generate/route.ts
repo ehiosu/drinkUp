@@ -4,7 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 const anthropic = new Anthropic();
 
 // Types that return structured JSON (not plain text)
-const jsonTypes = ["would-you-rather", "guess-the", "countdown"];
+const jsonTypes = ["would-you-rather", "guess-the", "countdown", "guess-it"];
 
 // Single question prompts (used mid-game)
 const singlePrompts: Record<string, (players: string[], currentPlayer?: string) => string> = {
@@ -31,6 +31,9 @@ const singlePrompts: Record<string, (players: string[], currentPlayer?: string) 
 
   "countdown": (players) =>
     `Generate a single "Countdown" challenge for a drinking game with players: ${players.join(", ")}. Pick a fun category and a number of items to name (between 3-7). Return ONLY a JSON object: {"category": "Types of pasta", "count": 5, "timeSeconds": 15, "examples": ["penne", "fusilli", "spaghetti", "rigatoni", "farfalle"]}. The category should be fun and the count should be achievable but challenging.`,
+
+  "guess-it": (players) =>
+    `Generate a single "Guess It" trivia challenge for a drinking game with players: ${players.join(", ")}. The question must have ONE specific, well-known correct answer (a number, year, name, or short fact) that everyone can guess at. Return ONLY a JSON object: {"question": "Guess the year the first iPhone was released", "answer": "2007"}. Keep the answer short and unambiguous. Make it fun and party-appropriate.`,
 };
 
 // Batch prompts (used for pre-generation)
@@ -58,6 +61,9 @@ const batchPrompts: Record<string, (count: number, players: string[]) => string>
 
   "countdown": (count, players) =>
     `Generate ${count} unique "Countdown" challenges for a drinking game. Players: ${players.join(", ")}. Each has a fun category and number of items (3-7) to name within a time limit. Return ONLY a JSON array of objects. Example: [{"category": "Types of pasta", "count": 5, "timeSeconds": 15, "examples": ["penne", "fusilli", "spaghetti", "rigatoni", "farfalle"]}, ...]. Categories should be varied and fun.`,
+
+  "guess-it": (count, players) =>
+    `Generate ${count} unique "Guess It" trivia challenges for a drinking game. Players: ${players.join(", ")}. Each question must have ONE specific, well-known correct answer (a number, year, name, or short fact) that everyone can guess at. Use a MIX of topics (history, science, pop culture, sports, geography, etc). Return ONLY a JSON array of objects. Example: [{"question": "Guess the year the first iPhone was released", "answer": "2007"}, ...]. Keep answers short and unambiguous.`,
 };
 
 // Fallback questions if Claude API is unavailable
@@ -112,6 +118,16 @@ const fallbacks: Record<string, () => Record<string, unknown>> = {
       { category: "Types of pizza toppings", count: 5, timeSeconds: 15, examples: ["pepperoni", "mushrooms", "olives", "onions", "sausage"] },
       { category: "Disney movies", count: 4, timeSeconds: 12, examples: ["Lion King", "Frozen", "Aladdin", "Moana"] },
       { category: "Social media platforms", count: 5, timeSeconds: 10, examples: ["Instagram", "TikTok", "Twitter", "Snapchat", "Facebook"] },
+    ];
+    return items[Math.floor(Math.random() * items.length)];
+  },
+  "guess-it": () => {
+    const items = [
+      { question: "Guess the year the first iPhone was released", answer: "2007" },
+      { question: "Guess how many bones are in the adult human body", answer: "206" },
+      { question: "Guess how many hearts an octopus has", answer: "3" },
+      { question: "Guess the year the Titanic sank", answer: "1912" },
+      { question: "Guess how many keys are on a standard piano", answer: "88" },
     ];
     return items[Math.floor(Math.random() * items.length)];
   },

@@ -84,6 +84,25 @@ export const games: GameInfo[] = [
     maxPlayers: 20,
     needsAI: true,
   },
+  {
+    id: "low-card",
+    name: "Low Card",
+    description: "Draw a card. The lowest take a shot!",
+    icon: "🎴",
+    color: "from-sky-500 to-indigo-600",
+    minPlayers: 2,
+    maxPlayers: 10,
+  },
+  {
+    id: "guess-it",
+    name: "Guess It",
+    description: "Everyone guesses. Wrong = take a shot!",
+    icon: "🎯",
+    color: "from-lime-500 to-emerald-600",
+    minPlayers: 2,
+    maxPlayers: 20,
+    needsAI: true,
+  },
 ];
 
 export const truthOrDrinkQuestions = [
@@ -226,6 +245,80 @@ export const wouldYouRatherQuestions = [
     optionA: "Have unlimited money",
     optionB: "Have unlimited time",
   },
+];
+
+// ---- Low Card ----
+export type PlayingCard = {
+  value: string;
+  suit: "hearts" | "diamonds" | "clubs" | "spades";
+  rank: number; // 2..14 (Ace high)
+};
+
+export function generateStandardDeck(): PlayingCard[] {
+  const suits: PlayingCard["suit"][] = [
+    "hearts",
+    "diamonds",
+    "clubs",
+    "spades",
+  ];
+  const values = [
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "J",
+    "Q",
+    "K",
+    "A",
+  ];
+
+  const deck: PlayingCard[] = [];
+  for (const suit of suits) {
+    values.forEach((value, i) => {
+      deck.push({ value, suit, rank: i + 2 });
+    });
+  }
+
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+
+  return deck;
+}
+
+// ---- Guess It ----
+export type GuessItQuestion = {
+  question: string;
+  answer: string;
+};
+
+export const guessItQuestions: GuessItQuestion[] = [
+  { question: "Guess the year the first iPhone was released", answer: "2007" },
+  { question: "Guess how many bones are in the adult human body", answer: "206" },
+  { question: "Guess the boiling point of water in Fahrenheit", answer: "212°F" },
+  { question: "Guess how many keys are on a standard piano", answer: "88" },
+  { question: "Guess the number of players on a soccer team (on the field)", answer: "11" },
+  { question: "Guess the year the Titanic sank", answer: "1912" },
+  { question: "Guess how many hearts an octopus has", answer: "3" },
+  { question: "Guess the tallest mountain on Earth (name)", answer: "Mount Everest" },
+  { question: "Guess how many continents there are", answer: "7" },
+  { question: "Guess the chemical symbol for gold", answer: "Au" },
+  { question: "Guess the number of strings on a standard guitar", answer: "6" },
+  { question: "Guess the year the Berlin Wall fell", answer: "1989" },
+  { question: "Guess how many sides a hexagon has", answer: "6" },
+  { question: "Guess the largest planet in our solar system", answer: "Jupiter" },
+  { question: "Guess how many minutes are in a full day", answer: "1440" },
+  { question: "Guess the speed of light (km/s, rounded)", answer: "~300,000 km/s" },
+  { question: "Guess the number of legs on a spider", answer: "8" },
+  { question: "Guess the year the World Wide Web was invented", answer: "1989" },
+  { question: "Guess how many colors are in a rainbow", answer: "7" },
+  { question: "Guess the smallest prime number", answer: "2" },
 ];
 
 export type KingsCupCard = {
